@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: arm1-rentzone-service
+  namespace: default
+  labels:
+    app: arm1-rentzone
+spec:
+  selector:
+    app: arm1-rentzone
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

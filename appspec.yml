@@ -1,0 +1,27 @@
+version: 0.0
+# ARM1 EKS Application Deployment Specification
+# This file defines how AWS CodeDeploy will deploy to EKS
+
+Resources:
+  - TargetService:
+      Type: AWS::EKS::Service
+      Properties:
+        TaskDefinition: <TASK_DEFINITION>
+        LoadBalancerInfo:
+          ContainerName: "arm1-rentzone-app"
+          ContainerPort: 80
+        PlatformVersion: "LATEST"
+
+Hooks:
+  - BeforeInstall:
+      - location: scripts/install_dependencies.sh
+        timeout: 300
+        runas: root
+  - ApplicationStart:
+      - location: scripts/start_server.sh
+        timeout: 300
+        runas: root
+  - ApplicationStop:
+      - location: scripts/stop_server.sh
+        timeout: 300
+        runas: root
