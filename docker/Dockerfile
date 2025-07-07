@@ -23,7 +23,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # Copy and extract Rentzone application
-COPY ../rentzone.zip /tmp/rentzone.zip
+COPY rentzone.zip /tmp/rentzone.zip
 RUN cd /tmp && unzip rentzone.zip && cp -r rentzone/* /var/www/html/ && rm -rf /tmp/rentzone*
 
 # Set proper ownership and permissions for Laravel
