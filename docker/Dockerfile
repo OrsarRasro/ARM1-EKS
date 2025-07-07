@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    mysql-client \
+    default-mysql-client \
+    gettext-base \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -21,8 +22,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files (you'll add your rentzone files here)
-# COPY rentzone/ /var/www/html/
+# Copy and extract Rentzone application
+COPY ../rentzone.zip /tmp/rentzone.zip
+RUN cd /tmp && unzip rentzone.zip && cp -r rentzone/* /var/www/html/ && rm -rf /tmp/rentzone*
 
 # Set proper ownership and permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html \
@@ -35,12 +37,15 @@ RUN a2enmod rewrite
 COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
 
 # Create Laravel storage and cache directories with proper permissions
-RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 # Copy environment configuration template
 COPY .env.template /var/www/html/.env
+
+# Create health check file
+RUN echo '<?php echo "OK"; ?>' > /var/www/html/health.php
 
 # Copy startup script that will configure environment variables
 COPY docker-entrypoint.sh /usr/local/bin/
