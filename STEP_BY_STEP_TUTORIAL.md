@@ -1650,12 +1650,87 @@ aws codebuild list-builds-for-project --project-name arm1-eks-cluster-docker-bui
 
 ---
 
-## 📋 STEP 33: Setup Database
+## 📋 STEP 33: Setup Database (Recommended Method)
 
-### Why Database Setup?
-Import the Rentzone database schema and data.
+### Why This Method?
+Using EC2 + SSH tunnel + MySQL Workbench is easier and more secure than direct RDS access.
 
-### 🔧 Install MySQL Client FIRST
+### 🔧 Method 1: EC2 + SSH Tunnel + MySQL Workbench (RECOMMENDED)
+
+**Step 1: Create Temporary EC2 Instance**
+```bash
+# Create EC2 instance in same VPC as RDS
+# Go to AWS Console → EC2 → Launch Instance
+# Choose: Amazon Linux 2
+# Instance type: t2.micro (free tier)
+# VPC: Same as EKS cluster
+# Subnet: Public subnet
+# Security Group: Allow SSH (port 22) from your IP
+# Key Pair: Create new or use existing
+```
+
+**Step 2: Update RDS Security Group**
+```bash
+# Go to AWS Console → RDS → Databases → Your RDS instance
+# Click on VPC security groups
+# Add inbound rule:
+# Type: MySQL/Aurora (3306)
+# Source: EC2 security group ID
+```
+
+**Step 3: Install MySQL Workbench**
+1. Download from: https://dev.mysql.com/downloads/workbench/
+2. Install with default settings
+
+**Step 4: Setup SSH Connection in MySQL Workbench**
+1. Open MySQL Workbench
+2. Click "+" next to "MySQL Connections"
+3. **Connection Method:** Standard TCP/IP over SSH
+4. **Connection Name:** ARM1-RDS-Connection
+5. **SSH Hostname:** [EC2-PUBLIC-IP]:22
+6. **SSH Username:** ec2-user
+7. **SSH Key File:** [Path to your .pem file]
+8. **MySQL Hostname:** [RDS-ENDPOINT]
+9. **MySQL Server Port:** 3306
+10. **Username:** admin
+11. **Password:** [Your RDS password]
+12. Click "Test Connection"
+13. Click "OK"
+
+**Step 5: Import Database**
+1. Connect to your database
+2. Create new schema: `rentzone`
+3. Go to **Server → Data Import**
+4. Select **Import from Self-Contained File**
+5. Choose your `rentzone-db.sql` file
+6. Target Schema: `rentzone`
+7. Click **Start Import**
+
+**Step 6: Create RDS Snapshot**
+```bash
+# Go to AWS Console → RDS → Databases
+# Select your RDS instance
+# Actions → Take snapshot
+# Snapshot identifier: arm1-rentzone-snapshot
+# Click "Take snapshot"
+```
+
+**Step 7: Update Terraform to Use Snapshot**
+Add this to your `rds.tf` file:
+```hcl
+# Add this line to aws_db_instance resource
+snapshot_identifier = "arm1-rentzone-snapshot"
+```
+
+**Step 8: Cleanup EC2 Instance**
+```bash
+# Terminate the temporary EC2 instance
+# Remove the SSH rule from RDS security group
+```
+
+### 🔧 Method 2: Direct MySQL Client (Alternative)
+
+**Install MySQL Client**
 ```bash
 # Download MySQL Command Line Client
 # Go to: https://dev.mysql.com/downloads/mysql/
@@ -1663,23 +1738,23 @@ Import the Rentzone database schema and data.
 # Install only "MySQL Command Line Client"
 ```
 
-### 🔧 Connect to RDS
+**Connect to RDS**
 ```bash
-# Get RDS endpoint (copy this value)
+# Get RDS endpoint
 terraform output rds_endpoint
 
-# Connect to database (replace with your actual endpoint)
+# Connect to database
 mysql -h your-rds-endpoint.amazonaws.com -u admin -p
 # Enter your database password when prompted
 ```
 
-### 🔧 Import Database
+**Import Database**
 ```sql
 -- Create database
 CREATE DATABASE IF NOT EXISTS rentzone;
 USE rentzone;
 
--- Import your SQL file (upload rentzone-db.sql to your system first)
+-- Import your SQL file
 SOURCE /path/to/rentzone-db.sql;
 
 -- Verify tables
