@@ -24,7 +24,11 @@ WORKDIR /var/www/html
 
 # Copy and extract Rentzone application
 COPY rentzone.zip /tmp/rentzone.zip
-RUN cd /tmp && unzip rentzone.zip && cp -r rentzone/* /var/www/html/ && rm -rf /tmp/rentzone*
+RUN cd /tmp && unzip -q rentzone.zip && \
+    rm -rf /var/www/html/* && \
+    cp -r rentzone/* /var/www/html/ && \
+    rm -rf /tmp/rentzone* && \
+    chown -R www-data:www-data /var/www/html
 
 # Set proper ownership and permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html \
@@ -44,7 +48,7 @@ RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions sto
 # Copy environment configuration template
 COPY .env.template /var/www/html/.env
 
-# Create health check file
+# Create health check file (after copying Rentzone files)
 RUN echo '<?php echo "OK"; ?>' > /var/www/html/health.php
 
 # Copy startup script that will configure environment variables
